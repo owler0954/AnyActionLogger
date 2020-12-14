@@ -1,4 +1,2 @@
-mapLogger/GifSequenceWriter.java
- mapLogger.GifSequenceWriter
-mapLogger/Primary.java
- mapLogger.Primary
+anyActionLogger/Primary.java
+ anyActionLogger.Primary
