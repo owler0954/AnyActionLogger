@@ -13,12 +13,13 @@ repositories{
 
 ext{
     //the build number that this plugin is made for
-    mindustryVersion = 'v120'
+    mindustryVersion = 'v121.2'
 }
 
 dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+    compile group: 'org.json', name: 'json', version: '20190722'
 }
 
 jar{
@@ -29,6 +30,6 @@ jar{
 
     from(rootDir){
         include "plugin.json"
-        include "block_colors.png"
+
     }
 }

@@ -2,6 +2,7 @@ package anyActionLogger;
 
 import arc.Events;
 import arc.util.CommandHandler;
+import arc.util.Log;
 import arc.util.Time;
 import arc.util.Timer;
 import mindustry.Vars;
@@ -35,18 +36,57 @@ public class Primary extends Plugin {
     static Player target;
     static Player starter;
     static ArrayList<Player> voters = new ArrayList<>();
+    //swear wars
+    static ArrayList<String> swear = new ArrayList<>();
     //other vars
 
     public Primary() {
-        netServer.admins.addActionFilter(action -> {
-            if (action.player == target || action.player == starter) {
-                return false;
-            }
-            return true;
+        swears();
+        Events.on(PlayerConnect.class, event -> {
+            Call.infoMessage(event.player.con(),
+                    "ƒŒ¡–Œ œŒ∆¿ÀŒ¬¿“‹ Õ¿ —≈–¬≈–\n" +
+                            "ÿ»«¿ ÿ»«¿ ÿ»«¿ minigames\n" +
+                            "œ‡‚ËÎ‡ Ë ÔÓÎÂÁÌ˚È ÍÓÌÚÂÌÚ ÂÒÚ¸ Ì‡ Discord ÒÂ‚ÂÂ\n" +
+                            "https://discord.gg/Efya9AUmf2\n" +
+                            "Œ·‡˘‡˛ ‚‡¯Â ‚ÌËÏ‡ÌËÂ Ì‡ ÚÓ ˜ÚÓ ˝ÚÓÚ ÒÂ‚Â ÌËÍ‡Í ÌÂ Ò‚ˇÁ‡Ì Ò ‡Á‡·ÓÚ˜ËÍÓÏ Ë„˚!\n\n" +
+                            "Welcome to server\n" +
+                            "ShizaShizaShiza minigames\n" +
+                            "Rules and info there:\n" +
+                            "https://discord.gg/Efya9AUmf2\n" +
+                            "This server not owned by game developer!"
+            );
         });
-        Events.on(WorldLoadEvent.class, event -> {
+        Events.on(PlayerChatEvent.class, event -> {
+            if (!isLogging || swear == null) {
+                return;
+            }
+            for (String s : swear) {
+                if (event.message.contains(s)) {
+                    log(0, event.player.name() + " : " + event.message);
+                    return;
+                }
+            }
+        });
+        Events.on(BlockBuildEndEvent.class, event -> {
+            if (event.unit.getPlayer() == null || !isLogging) {
+                return;
+            }
+            if (event.breaking) {
+                log(2, event.unit.getPlayer().name() + " destroy " + event.tile.block().name + " at " + event.tile.x + " " + event.tile.y);
+            }
+            if (!event.breaking) {
+                log(1, event.unit.getPlayer().name() + " build " + event.tile.block().name + " at " + event.tile.x + " " + event.tile.y);
+            }
+        });
+        Events.on(ServerLoadEvent.class, event -> {
             isLogging = true;
             logs = new ArrayList[4];
+            netServer.admins.addActionFilter(action -> {
+                if (action.player == target || action.player == starter) {
+                    return false;
+                }
+                return true;
+            });
             logs[0] = new ArrayList<String>();//messages
             logs[1] = new ArrayList<String>();//build
             logs[2] = new ArrayList<String>();//destroy
@@ -54,65 +94,11 @@ public class Primary extends Plugin {
         });
         Events.on(GameOverEvent.class, event -> {
             isLogging = false;
-            try {
-                writeLog();
-            } catch (IOException e) {
-                //TODO —Å–º–µ–Ω–∏—Ç—å –Ω–∞ –ª–æ–≥ –µ—Ä—Ä–æ—Ä
-                e.printStackTrace();
-            }
-        });
-    }
-
-    public void registerClientCommand(CommandHandler handler) {
-        handler.<Player>register("votekick", "<plaeyr_name...>", "run kick vote", (args, player) -> {
-            if (target != null) {
-                Call.infoMessage(player.con, "alreadyGo");
-                return;
-            }
-            if (Groups.player.size() < 3) {
-                Call.infoMessage(player.con, "notEnoughtPlayers");
-                return;
-            }
-            for (Player p : Groups.player) {
-                if (p.name().equals(args[0])) {
-                    target = p;
-                    starter = player;
-                    break;
-                }
-            }
-            if (target == null) {
-                Call.infoMessage(player.con, "notFound");
-                return;
-            }
-
-            voters = new ArrayList<>();
-            log(3, "Started by " + starter.name() + ". Target: " + target.name());
-            task = Timer.schedule(() -> {
-                voteChecker();
-            }, 60f);
-        });
-        handler.<Player>register("vote", "<y/n>", "vote for something", (args, player) -> {
-            if (voters.contains(player) || player == starter) {
-                Call.infoMessage(player.con, "alreadyVote");
-                return;
-            }
-            if (player == target) {
-                Call.infoMessage(player.con, "noVoteForYouSelf");
-                return;
-            }
-            if (args[0].equalsIgnoreCase("y")) {
-                votes++;
-                voters.add(player);
-                Call.sendMessage("[lightgray]" + player.name() + "[lightgray] has voted on kicking[orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Type[orange] /vote <y/n>[] to agree.");
-                return;
-            }
-            if (args[0].equalsIgnoreCase("n")) {
-                votes--;
-                voters.add(player);
-                Call.sendMessage("[lightgray]" + player.name() + "[lightgray] has voted on kicking[orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Type[orange] /vote <y/n>[] to agree.");
-                return;
-            }
-            player.sendMessage("[scarlet]Vote either 'y' (yes) or 'n' (no).");
+            writeLog();
+            logs[0] = new ArrayList<String>();//messages
+            logs[1] = new ArrayList<String>();//build
+            logs[2] = new ArrayList<String>();//destroy
+            logs[3] = new ArrayList<String>();//votekick
         });
     }
 
@@ -123,32 +109,49 @@ public class Primary extends Plugin {
         }
     }
 
-    public static void writeLog() throws IOException {
-        msgLog = new File("config/aal/" + new Date().toString().replace(' ', '-') + "/messageLog.txt");
-        buildLog = new File("config/aal/" + new Date().toString().replace(' ', '-') + "/buildLog.txt");
-        destroyLog = new File("config/aal/" + new Date().toString().replace(' ', '-') + "/destroyLog.txt");
-        voteKickLog = new File("config/aal/" + new Date().toString().replace(' ', '-') + "/voteKickLog.txt");
-        FileWriter f = new FileWriter(msgLog);
-        for (String s : logs[0]) {
-            f.append(s);
+    public static void writeLog() {
+        try {
+            System.out.println("Start log save");
+            if (logs[0].size() < 1 && logs[1].size() < 1 && logs[2].size() < 1 && logs[3].size() < 1) {
+                Log.err("no actions found");
+                return;
+            }
+            String date = "" + new Date().toString().replace(' ', '-').replace(':', '-');
+            File path = new File("config/aal/" + date);
+            path.mkdir();
+            msgLog = new File("config/aal/" + date + "/messageLog.txt");
+            buildLog = new File("config/aal/" + date + "/buildLog.txt");
+            destroyLog = new File("config/aal/" + date + "/destroyLog.txt");
+            voteKickLog = new File("config/aal/" + date + "/voteKickLog.txt");
+            FileWriter f = new FileWriter(msgLog, false);
+            for (String s : logs[0]) {
+                f.append(s);
+            }
+            System.out.print(1);
+            f.flush();
+            f = new FileWriter(buildLog, false);
+            for (String s : logs[1]) {
+                f.append(s);
+            }
+            f.flush();
+            System.out.print(2);
+            f = new FileWriter(destroyLog, false);
+            for (String s : logs[2]) {
+                f.append(s);
+            }
+            f.flush();
+            System.out.print(3);
+            f = new FileWriter(voteKickLog, false);
+            for (String s : logs[3]) {
+                f.append(s);
+            }
+            f.flush();
+            System.out.print(4);
+            f.close();
+            System.out.println("logged done");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        f.flush();
-        f = new FileWriter(buildLog);
-        for (String s : logs[1]) {
-            f.append(s);
-        }
-        f.flush();
-        f = new FileWriter(destroyLog);
-        for (String s : logs[2]) {
-            f.append(s);
-        }
-        f.flush();
-        f = new FileWriter(voteKickLog);
-        for (String s : logs[3]) {
-            f.append(s);
-        }
-        f.flush();
-        f.close();
     }
 
     public static void voteChecker() {
@@ -165,5 +168,9 @@ public class Primary extends Plugin {
             target = null;
             starter = null;
         }
+    }
+
+    public static void swears() {
+        swear = ByteCode.getSwears();
     }
 }
