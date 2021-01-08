@@ -29,7 +29,8 @@ public class Primary extends Plugin {
     static File destroyLog;
     static File voteKickLog;
     static ArrayList<String>[] logs = new ArrayList[4];
-    public boolean isLogging = false;
+    public static boolean isLogging = false;
+    public static boolean saved = false;
     //Vote kick vars
     static int votes = 0;
     static Timer.Task task = null;
@@ -92,6 +93,10 @@ public class Primary extends Plugin {
             logs[2] = new ArrayList<String>();//destroy
             logs[3] = new ArrayList<String>();//votekick
         });
+        Events.on(WorldLoadEvent.class, e -> {
+            saved = false;
+            isLogging = true;
+        });
         Events.on(GameOverEvent.class, event -> {
             isLogging = false;
             writeLog();
@@ -111,6 +116,10 @@ public class Primary extends Plugin {
 
     public static void writeLog() {
         try {
+            if (saved) {
+                return;
+            }
+            saved = true;
             System.out.println("Start log save");
             if (logs[0].size() < 1 && logs[1].size() < 1 && logs[2].size() < 1 && logs[3].size() < 1) {
                 Log.err("no actions found");
