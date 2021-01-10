@@ -8,6 +8,8 @@ sourceSets.main.java.srcDirs = ["src"]
 
 repositories{
     mavenCentral()
+    mavenLocal()
+    jcenter()
     maven{ url 'https://www.jitpack.io' }
 }
 
@@ -20,6 +22,7 @@ dependencies{
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
     compile group: 'org.json', name: 'json', version: '20190722'
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
 
 jar{
