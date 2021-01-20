@@ -21,15 +21,24 @@ public class SocketConnector {
             out = new DataOutputStream(socket.getOutputStream());
         } catch (UnknownHostException u) {
             System.out.println(u);
+            return;
         } catch (IOException i) {
             System.out.println(i);
+            return;
         }// string to read message from input
 // keep reading until "Over" is input
         try {
-            Gson g = new Gson();
-            out.writeUTF(g.toJson(sendedPackage));
+            if(out==null){return;}
+            out.writeUTF(sendedPackage.type);
+            out.writeUTF(sendedPackage.reason);
+            out.writeUTF(sendedPackage.name);
+            out.writeUTF(sendedPackage.server);
+            out.writeUTF(sendedPackage.author);
+            out.writeUTF(sendedPackage.banTime+"");
+            out.writeUTF(sendedPackage.data.toString());
         } catch (IOException i) {
             System.out.println(i);
+            return;
         }
 // close the connection
         try {
@@ -38,7 +47,10 @@ public class SocketConnector {
             socket.close();
         } catch (IOException i) {
             System.out.println(i);
+            return;
         }
+        System.out.println("Closed");
+        return;
     }
 
     public static class SendedPackage {

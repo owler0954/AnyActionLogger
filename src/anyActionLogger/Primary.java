@@ -91,6 +91,7 @@ public class Primary extends Plugin {
                 log(1, event.unit.getPlayer().name() + " build " + event.tile.block().name + " at " + event.tile.x + " " + event.tile.y);
             }
         });
+
         Events.on(ServerLoadEvent.class, event -> {
             isLogging = true;
             logs = new ArrayList[5];
@@ -191,20 +192,28 @@ public class Primary extends Plugin {
     }
 
     public static void voteChecker() {
-        if (votes > 2) {
-            Call.sendMessage("[orange]Голосования прошло успешно.[scarlet]" + target.name + "[orange] был кикнут с сервера на 30 минут.");
-            target.getInfo().lastKicked = Time.millis() + (30 * 1000);
-            log(3, "[Succsess vote]Started by " + starter.name() + ". Target: " + target.name());
-            Groups.player.each(p -> p.uuid().equals(target.uuid()), p -> p.kick(Packets.KickReason.vote));
-            new SocketConnector(new SocketConnector.SendedPackage("Kick", "Vote passed", target.name(), "no name", starter.name(), 30, new Date()));
-            target = null;
-            starter = null;
-        } else {
-            Call.sendMessage("[lightgray]Голосование прошло не успешно. Набрано недостаточно голосов для кика [orange]" + target.name + "[lightgray].");
-            log(3, "[Fail vote]Started by " + starter.name() + ". Target: " + target.name());
-            target = null;
-            starter = null;
-        }
+        try {
+            if (target == null) {
+                return;
+            }
+            if (starter == null) {
+                return;
+            }
+            if (votes > 2) {
+                Call.sendChatMessage("[orange]Голосование прошло успешно.[scarlet]" + target.name + "[orange] был кикнут с сервера на 30 минут.");
+                target.getInfo().lastKicked = Time.millis() + (30 * 1000);
+                log(3, "[Succsess vote]Started by " + starter.name() + ". Target: " + target.name());
+                Groups.player.each(p -> p.uuid().equals(target.uuid()), p -> p.kick(Packets.KickReason.vote));
+                new SocketConnector(new SocketConnector.SendedPackage("Кик", "Выгнан голосованием", target.name(), "no name", starter.name(), 30, new Date()));
+                target = null;
+                starter = null;
+            } else {
+                Call.sendChatMessage("[lightgray]Голосование прошло не успешно. Набрано недостаточно голосов для кика [orange]" + target.name + "[lightgray].");
+                log(3, "[Fail vote]Started by " + starter.name() + ". Target: " + target.name());
+                target = null;
+                starter = null;
+            }
+        }catch(NullPointerException e){}
     }
 
     public static void swears() {
@@ -222,12 +231,18 @@ public class Primary extends Plugin {
             for (Player p : Groups.player) {
                 if (p.con().address.equals(tgt.con.address)) {
                     p.getInfo().lastKicked = Time.millis() + time;
-                    p.kick("ВЫ забанены на " + time / 1000 / 60 + " инут по причине: " + args[2]);
+                    p.kick("ВЫ забанены на " + time / 1000 / 60 + " минут по причине: " + args[2]);
                 }
             }
-            new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", "Консоль", time, new Date()));
-
+            SocketConnector s=new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", "Консоль", time, new Date()));
+            System.out.println("posted");
+            return;
         });
+
+    }
+
+    @Override
+    public void registerClientCommands(CommandHandler handler) {
         handler.removeCommand("votekick");
         handler.<Player>register("votekick", "<player_name...>", "Запуск голосования", (args, player) -> {
             if (target != null) {
@@ -257,7 +272,8 @@ public class Primary extends Plugin {
             }, 60f);
         });
         handler.removeCommand("vote");
-        handler.<Player>register("vote", "<y/n>", "vote for something", (args, player) -> {
+        handler.<Player>register("vote", "<y/n>", "Голосовать", (args, player) -> {
+            Log.info("voted");
             if (voters.contains(player) || player == starter) {
                 Call.infoMessage(player.con, "Вы уже проголосовали");
                 return;
@@ -269,21 +285,17 @@ public class Primary extends Plugin {
             if (args[0].equalsIgnoreCase("y")) {
                 votes++;
                 voters.add(player);
-                Call.sendMessage("[lightgray]" + player.name() + "[lightgray] проголосовал за кик [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Напишите [orange] /vote <y/n>[] чтобы проголосовать.");
+                Call.sendChatMessage("[lightgray]" + player.name() + "[lightgray] проголосовал за кик [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Напишите [orange] /vote <y/n>[] чтобы проголосовать.");
                 return;
             }
             if (args[0].equalsIgnoreCase("n")) {
                 votes--;
                 voters.add(player);
-                Call.sendMessage("[lightgray]" + player.name() + "[lightgray] проголосовал против кика [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Type[orange] /vote <y/n>[] чтобы проголосовать.");
+                Call.sendChatMessage("[lightgray]" + player.name() + "[lightgray] проголосовал против кика [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Type[orange] /vote <y/n>[] чтобы проголосовать.");
                 return;
             }
-            player.sendMessage("[scarlet]ВОзможнв только 'y' (за) или 'n' (против).");
+            player.sendMessage("[scarlet]Возможны только 'y' (за) или 'n' (против).");
         });
-    }
-
-    @Override
-    public void registerClientCommands(CommandHandler handler) {
         handler.<Player>register("tempban", "<min> <ip> <reason...>", "tempban", (args, player) -> {
             if (!player.admin()) {
                 return;
@@ -299,7 +311,9 @@ public class Primary extends Plugin {
                     p.kick("ВЫ забанены на " + time / 1000 / 60 + " минут по причине: " + args[2]);
                 }
             }
-            new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", player.name(), time, new Date()));
+            SocketConnector s = new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", player.name(), time, new Date()));
+            System.out.println("posted");
+            return;
         });
     }
 }
