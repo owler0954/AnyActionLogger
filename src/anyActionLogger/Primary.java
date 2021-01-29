@@ -7,22 +7,23 @@ import arc.util.Time;
 import arc.util.Timer;
 import mindustry.Vars;
 import mindustry.game.EventType;
+import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.gen.Player;
 import mindustry.mod.Plugin;
 import mindustry.game.EventType.*;
+import mindustry.net.Administration;
 import mindustry.net.Packets;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Date;
 
 import static mindustry.Vars.*;
 
 public class Primary extends Plugin {
+
     //log wars
     static File msgLog;
     static File buildLog;
@@ -32,6 +33,7 @@ public class Primary extends Plugin {
     static ArrayList<String>[] logs = new ArrayList[5];
     public static boolean isLogging = false;
     public static boolean saved = false;
+    public static ArrayList<SocketConnector.SendedPackage> netLogs = new ArrayList<>();
     //Vote kick vars
     static int votes = 0;
     static Timer.Task task = null;
@@ -43,7 +45,19 @@ public class Primary extends Plugin {
     //other vars
 
     public Primary() {
-        swears();
+        Timer.schedule(() -> {
+            ArrayList<SocketConnector.SendedPackage> rm = new ArrayList<>();
+            for (SocketConnector.SendedPackage s : netLogs) {
+                new SocketConnector(s);
+                rm.add(s);
+            }
+            netLogs.removeAll(rm);
+        }, 0, 60);
+        try {
+            swears();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         Events.on(PlayerConnect.class, event -> {
             Call.infoMessage(event.player.con(),
                     "ДОБРО ПОЖАЛОВАТЬ НА СЕРВЕР\n" +
@@ -61,6 +75,11 @@ public class Primary extends Plugin {
                     "Партнеры:\n" +
                             "pandorum.su:8000 - сервер Mindustry\n" +
                             "Obvilionnetwork.ru | Комплекс серверов Minecraft и Mindustry\n"
+            );
+            Call.infoMessage(event.player.con(),
+                    "Внимание:\n" +
+                            "открылся PvP tower defence сервер\n" +
+                            "для входа туда используйте команду /swipe td\n"
             );
         });
         Events.on(PlayerChatEvent.class, event -> {
@@ -121,7 +140,7 @@ public class Primary extends Plugin {
             logs[4] = new ArrayList<String>();//configure
         });
         Events.on(PlayerBanEvent.class, e -> {
-            new SocketConnector(new SocketConnector.SendedPackage("Ban", "не указано", e.player.name(), "не указано", "Не указано", 0, new Date()));
+            netLogs.add(new SocketConnector.SendedPackage("Ban", "не указано", e.player.name(), Administration.Config.valueOf("name").get().toString(), "Не указано", 0, new Date()));
         });
     }
 
@@ -204,7 +223,7 @@ public class Primary extends Plugin {
                 target.getInfo().lastKicked = Time.millis() + (30 * 1000);
                 log(3, "[Succsess vote]Started by " + starter.name() + ". Target: " + target.name());
                 Groups.player.each(p -> p.uuid().equals(target.uuid()), p -> p.kick(Packets.KickReason.vote));
-                new SocketConnector(new SocketConnector.SendedPackage("Кик", "Выгнан голосованием", target.name(), "no name", starter.name(), 30, new Date()));
+                netLogs.add(new SocketConnector.SendedPackage("Кик", "Выгнан голосованием", target.name(), Administration.Config.valueOf("name").get().toString(), starter.name(), 30, new Date()));
                 target = null;
                 starter = null;
             } else {
@@ -213,11 +232,20 @@ public class Primary extends Plugin {
                 target = null;
                 starter = null;
             }
-        }catch(NullPointerException e){}
+        } catch (NullPointerException e) {
+        }
     }
 
-    public static void swears() {
-        swear = ByteCode.getSwears();
+    public static void swears() throws IOException {
+        FileReader r = new FileReader("config/aal/swears.txt");
+        BufferedReader reader = new BufferedReader(r);
+        while (true) {
+            String line = reader.readLine();
+            if (line == null) {
+                break;
+            }
+            swear.add(line);
+        }
     }
 
     @Override
@@ -234,7 +262,7 @@ public class Primary extends Plugin {
                     p.kick("ВЫ забанены на " + time / 1000 / 60 + " минут по причине: " + args[2]);
                 }
             }
-            SocketConnector s=new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", "Консоль", time, new Date()));
+            netLogs.add(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), Administration.Config.valueOf("name").get().toString(), "Консоль", time, new Date()));
             System.out.println("posted");
             return;
         });
@@ -311,9 +339,44 @@ public class Primary extends Plugin {
                     p.kick("ВЫ забанены на " + time / 1000 / 60 + " минут по причине: " + args[2]);
                 }
             }
-            SocketConnector s = new SocketConnector(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), "не указано", player.name(), time, new Date()));
+            netLogs.add(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), Administration.Config.valueOf("name").get().toString(), player.name(), time, new Date()));
             System.out.println("posted");
             return;
+        });
+        handler.<Player>register("spec", "<ip>", "hentai", (args, player) -> {
+            if (!player.admin()) {
+                return;
+            }
+            Player tgt = Groups.player.find(p -> p.con.address.equals(args[0]));
+            if (tgt == null) {
+                Call.infoMessage(player.con(), "Не найден");
+                return;
+            }
+            tgt.team(Team.all[113]);
+        });
+        handler.<Player>register("post", "<ip> <msg...>", "send message to face", (args, player) -> {
+            if (!player.admin()) {
+                return;
+            }
+            Player tgt = Groups.player.find(p -> p.con.address.equals(args[0]));
+            if (tgt == null) {
+                Call.infoMessage(player.con(), "Не найден");
+                return;
+            }
+            Call.infoMessage(tgt.con(), args[1]);
+        });
+        handler.<Player>register("swipe", "<td/zk>", "Перемезение по серверам", (args, player) -> {
+            int port = 0;
+            if (args[0].equals("td")) {
+                port = 6568;
+            }
+            if (args[0].equals("zk")) {
+                port = 6567;
+            }
+            if (port == 0) {
+                return;
+            }
+            Call.connect(player.con, "shizashizashiza.ml", port);
         });
     }
 }
