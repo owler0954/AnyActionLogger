@@ -17,7 +17,6 @@ public class SocketConnector {
         try {
             socket = new Socket("127.0.0.1", 5000);
             System.out.println("Connected");
-            input = new DataInputStream(System.in);
             out = new DataOutputStream(socket.getOutputStream());
         } catch (UnknownHostException u) {
             System.out.println(u);
@@ -42,7 +41,6 @@ public class SocketConnector {
         }
 // close the connection
         try {
-            input.close();
             out.close();
             socket.close();
         } catch (IOException i) {

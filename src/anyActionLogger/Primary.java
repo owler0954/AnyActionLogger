@@ -23,7 +23,6 @@ import java.util.Date;
 import static mindustry.Vars.*;
 
 public class Primary extends Plugin {
-
     //log wars
     static File msgLog;
     static File buildLog;
@@ -46,12 +45,10 @@ public class Primary extends Plugin {
 
     public Primary() {
         Timer.schedule(() -> {
-            ArrayList<SocketConnector.SendedPackage> rm = new ArrayList<>();
             for (SocketConnector.SendedPackage s : netLogs) {
                 new SocketConnector(s);
-                rm.add(s);
             }
-            netLogs.removeAll(rm);
+            netLogs = new ArrayList<>();
         }, 0, 60);
         try {
             swears();
@@ -75,11 +72,6 @@ public class Primary extends Plugin {
                     "Партнеры:\n" +
                             "pandorum.su:8000 - сервер Mindustry\n" +
                             "Obvilionnetwork.ru | Комплекс серверов Minecraft и Mindustry\n"
-            );
-            Call.infoMessage(event.player.con(),
-                    "Внимание:\n" +
-                            "открылся PvP tower defence сервер\n" +
-                            "для входа туда используйте команду /swipe td\n"
             );
         });
         Events.on(PlayerChatEvent.class, event -> {
@@ -210,32 +202,6 @@ public class Primary extends Plugin {
         }
     }
 
-    public static void voteChecker() {
-        try {
-            if (target == null) {
-                return;
-            }
-            if (starter == null) {
-                return;
-            }
-            if (votes > 2) {
-                Call.sendChatMessage("[orange]Голосование прошло успешно.[scarlet]" + target.name + "[orange] был кикнут с сервера на 30 минут.");
-                target.getInfo().lastKicked = Time.millis() + (30 * 1000);
-                log(3, "[Succsess vote]Started by " + starter.name() + ". Target: " + target.name());
-                Groups.player.each(p -> p.uuid().equals(target.uuid()), p -> p.kick(Packets.KickReason.vote));
-                netLogs.add(new SocketConnector.SendedPackage("Кик", "Выгнан голосованием", target.name(), Administration.Config.valueOf("name").get().toString(), starter.name(), 30, new Date()));
-                target = null;
-                starter = null;
-            } else {
-                Call.sendChatMessage("[lightgray]Голосование прошло не успешно. Набрано недостаточно голосов для кика [orange]" + target.name + "[lightgray].");
-                log(3, "[Fail vote]Started by " + starter.name() + ". Target: " + target.name());
-                target = null;
-                starter = null;
-            }
-        } catch (NullPointerException e) {
-        }
-    }
-
     public static void swears() throws IOException {
         FileReader r = new FileReader("config/aal/swears.txt");
         BufferedReader reader = new BufferedReader(r);
@@ -271,59 +237,6 @@ public class Primary extends Plugin {
 
     @Override
     public void registerClientCommands(CommandHandler handler) {
-        handler.removeCommand("votekick");
-        handler.<Player>register("votekick", "<player_name...>", "Запуск голосования", (args, player) -> {
-            if (target != null) {
-                Call.infoMessage(player.con, "Голосование уже идет");
-                return;
-            }
-            if (Groups.player.size() < 3) {
-                Call.infoMessage(player.con, "НЕ достаточно игроков");
-                return;
-            }
-            for (Player p : Groups.player) {
-                if (p.name().equals(args[0])) {
-                    target = p;
-                    starter = player;
-                    break;
-                }
-            }
-            if (target == null) {
-                Call.infoMessage(player.con, "не найден");
-                return;
-            }
-
-            voters = new ArrayList<>();
-            log(3, "Started by " + starter.name() + ". Target: " + target.name());
-            task = Timer.schedule(() -> {
-                voteChecker();
-            }, 60f);
-        });
-        handler.removeCommand("vote");
-        handler.<Player>register("vote", "<y/n>", "Голосовать", (args, player) -> {
-            Log.info("voted");
-            if (voters.contains(player) || player == starter) {
-                Call.infoMessage(player.con, "Вы уже проголосовали");
-                return;
-            }
-            if (player == target) {
-                Call.infoMessage(player.con, "За себя не голосуют");
-                return;
-            }
-            if (args[0].equalsIgnoreCase("y")) {
-                votes++;
-                voters.add(player);
-                Call.sendChatMessage("[lightgray]" + player.name() + "[lightgray] проголосовал за кик [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Напишите [orange] /vote <y/n>[] чтобы проголосовать.");
-                return;
-            }
-            if (args[0].equalsIgnoreCase("n")) {
-                votes--;
-                voters.add(player);
-                Call.sendChatMessage("[lightgray]" + player.name() + "[lightgray] проголосовал против кика [orange]" + target.name + "[].[accent] (" + votes + "/3)\n[lightgray]Type[orange] /vote <y/n>[] чтобы проголосовать.");
-                return;
-            }
-            player.sendMessage("[scarlet]Возможны только 'y' (за) или 'n' (против).");
-        });
         handler.<Player>register("tempban", "<min> <ip> <reason...>", "tempban", (args, player) -> {
             if (!player.admin()) {
                 return;
@@ -353,6 +266,19 @@ public class Primary extends Plugin {
                 return;
             }
             tgt.team(Team.all[113]);
+        });
+        handler.<Player>register("team", "<id>", "hentai", (args, player) -> {
+            if (!player.admin()) {
+                return;
+            }
+            Player tgt = player;
+            int team = 1;
+            try {
+                team = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                tgt.sendMessage("Ошибка в преобразовании номера");
+            }
+            tgt.team(Team.all[team]);
         });
         handler.<Player>register("post", "<ip> <msg...>", "send message to face", (args, player) -> {
             if (!player.admin()) {
