@@ -33,12 +33,6 @@ public class Primary extends Plugin {
     public static boolean isLogging = false;
     public static boolean saved = false;
     public static ArrayList<SocketConnector.SendedPackage> netLogs = new ArrayList<>();
-    //Vote kick vars
-    static int votes = 0;
-    static Timer.Task task = null;
-    static Player target;
-    static Player starter;
-    static ArrayList<Player> voters = new ArrayList<>();
     //swear wars
     static ArrayList<String> swear = new ArrayList<>();
     //other vars
@@ -60,17 +54,16 @@ public class Primary extends Plugin {
                     "ДОБРО ПОЖАЛОВАТЬ НА СЕРВЕР\n" +
                             "ШИЗА ШИЗА ШИЗА minigames\n" +
                             "Правила и полезный контент есть на Discord сервере\n" +
-                            "https://discord.gg/Efya9AUmf2\n" +
+                            "https://discord.gg/DxZjgDsyda\n" +
                             "Обращаю ваше внимание на то что этот сервер никак не связан с разработчиком игры!\n\n" +
                             "Welcome to server\n" +
                             "ShizaShizaShiza minigames\n" +
                             "Rules and info there:\n" +
-                            "https://discord.gg/Efya9AUmf2\n" +
+                            "https://discord.gg/DxZjgDsyda\n" +
                             "This server not owned by game developer!"
             );
             Call.infoMessage(event.player.con(),
                     "Партнеры:\n" +
-                            "pandorum.su:8000 - сервер Mindustry\n" +
                             "Obvilionnetwork.ru | Комплекс серверов Minecraft и Mindustry\n"
             );
         });
@@ -106,12 +99,6 @@ public class Primary extends Plugin {
         Events.on(ServerLoadEvent.class, event -> {
             isLogging = true;
             logs = new ArrayList[5];
-            netServer.admins.addActionFilter(action -> {
-                if (action.player == target || action.player == starter) {
-                    return false;
-                }
-                return true;
-            });
             logs[0] = new ArrayList<String>();//messages
             logs[1] = new ArrayList<String>();//build
             logs[2] = new ArrayList<String>();//destroy
@@ -232,7 +219,6 @@ public class Primary extends Plugin {
             System.out.println("posted");
             return;
         });
-
     }
 
     @Override
