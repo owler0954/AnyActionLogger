@@ -1,5 +1,13 @@
+anyActionLogger/Webhook.java
+ anyActionLogger.Webhook
+ anyActionLogger.Webhook$1
+ anyActionLogger.Webhook$EmbedObject
+ anyActionLogger.Webhook$EmbedObject$Author
+ anyActionLogger.Webhook$EmbedObject$Field
+ anyActionLogger.Webhook$EmbedObject$Footer
+ anyActionLogger.Webhook$EmbedObject$Image
+ anyActionLogger.Webhook$EmbedObject$Thumbnail
+ anyActionLogger.Webhook$JSONObject
 anyActionLogger/Primary.java
  anyActionLogger.Primary
-anyActionLogger/SocketConnector.java
- anyActionLogger.SocketConnector
- anyActionLogger.SocketConnector$SendedPackage
+ anyActionLogger.Primary$SendedPackage

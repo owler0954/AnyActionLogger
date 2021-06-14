@@ -4,9 +4,6 @@ import arc.Events;
 import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Time;
-import arc.util.Timer;
-import mindustry.Vars;
-import mindustry.game.EventType;
 import mindustry.game.Team;
 import mindustry.gen.Call;
 import mindustry.gen.Groups;
@@ -14,13 +11,13 @@ import mindustry.gen.Player;
 import mindustry.mod.Plugin;
 import mindustry.game.EventType.*;
 import mindustry.net.Administration;
-import mindustry.net.Packets;
 
+import java.awt.*;
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-
-import static mindustry.Vars.*;
+import java.util.concurrent.TimeUnit;
 
 public class Primary extends Plugin {
     //log wars
@@ -32,41 +29,30 @@ public class Primary extends Plugin {
     static ArrayList<String>[] logs = new ArrayList[5];
     public static boolean isLogging = false;
     public static boolean saved = false;
-    public static ArrayList<SocketConnector.SendedPackage> netLogs = new ArrayList<>();
+    //public static ArrayList<SendedPackage> netLogs = new ArrayList<>();
     //swear wars
     static ArrayList<String> swear = new ArrayList<>();
     //other vars
+    static SimpleDateFormat format = new SimpleDateFormat("ddMMyyHHmm");
 
     public Primary() {
-        Timer.schedule(() -> {
-            for (SocketConnector.SendedPackage s : netLogs) {
-                new SocketConnector(s);
-            }
-            netLogs = new ArrayList<>();
-        }, 0, 60);
         try {
             swears();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Events.on(PlayerConnect.class, event -> {
-            Call.infoMessage(event.player.con(),
-                    "ƒŒ¡–Œ œŒ∆¿ÀŒ¬¿“‹ Õ¿ —≈–¬≈–\n" +
-                            "ÿ»«¿ ÿ»«¿ ÿ»«¿ minigames\n" +
-                            "œ‡‚ËÎ‡ Ë ÔÓÎÂÁÌ˚È ÍÓÌÚÂÌÚ ÂÒÚ¸ Ì‡ Discord ÒÂ‚ÂÂ\n" +
-                            "https://discord.gg/DxZjgDsyda\n" +
-                            "Œ·‡˘‡˛ ‚‡¯Â ‚ÌËÏ‡ÌËÂ Ì‡ ÚÓ ˜ÚÓ ˝ÚÓÚ ÒÂ‚Â ÌËÍ‡Í ÌÂ Ò‚ˇÁ‡Ì Ò ‡Á‡·ÓÚ˜ËÍÓÏ Ë„˚!\n\n" +
-                            "Welcome to server\n" +
-                            "ShizaShizaShiza minigames\n" +
-                            "Rules and info there:\n" +
-                            "https://discord.gg/DxZjgDsyda\n" +
-                            "This server not owned by game developer!"
-            );
-            Call.infoMessage(event.player.con(),
-                    "œ‡ÚÌÂ˚:\n" +
-                            "Obvilionnetwork.ru |  ÓÏÔÎÂÍÒ ÒÂ‚ÂÓ‚ Minecraft Ë Mindustry\n"
-            );
-        });
+        Events.on(PlayerConnect.class, event -> Call.infoMessage(event.player.con(),
+                "–î–û–ë–†–û –ü–û–ñ–ê–õ–û–í–ê–¢–¨ –ù–ê –°–ï–†–í–ï–†\n" +
+                        "STORAGE_05\n" +
+                        "–ü—Ä–∞–≤–∏–ª–∞ –∏ –ø–æ–ª–µ–∑–Ω—ã–π –∫–æ–Ω—Ç–µ–Ω—Ç –µ—Å—Ç—å –Ω–∞ Discord —Å–µ—Ä–≤–µ—Ä–µ\n" +
+                        "https://discord.gg/ejUvjeDkYv\n" +
+                        "–û–±—Ä–∞—â–µ–º –≤–∞—à–µ –≤–Ω–∏–º–∞–Ω–∏–µ –Ω–∞ —Ç–æ —á—Ç–æ —ç—Ç–æ—Ç —Å–µ—Ä–≤–µ—Ä –Ω–∏–∫–∞–∫ –Ω–µ —Å–≤—è–∑–∞–Ω —Å —Ä–∞–∑—Ä–∞–±–æ—Ç—á–∏–∫–æ–º –∏–≥—Ä—ã!\n\n" +
+                        "Welcome to server\n" +
+                        "STORAGE_05\n" +
+                        "Rules and info there:\n" +
+                        "https://discord.gg/ejUvjeDkYv\n" +
+                        "This server not owned by game developer!"
+        ));
         Events.on(PlayerChatEvent.class, event -> {
             if (!isLogging || swear == null) {
                 return;
@@ -99,11 +85,11 @@ public class Primary extends Plugin {
         Events.on(ServerLoadEvent.class, event -> {
             isLogging = true;
             logs = new ArrayList[5];
-            logs[0] = new ArrayList<String>();//messages
-            logs[1] = new ArrayList<String>();//build
-            logs[2] = new ArrayList<String>();//destroy
-            logs[3] = new ArrayList<String>();//votekick
-            logs[4] = new ArrayList<String>();//configure
+            logs[0] = new ArrayList<>();//messages
+            logs[1] = new ArrayList<>();//build
+            logs[2] = new ArrayList<>();//destroy
+            logs[3] = new ArrayList<>();//votekick
+            logs[4] = new ArrayList<>();//configure
         });
         Events.on(WorldLoadEvent.class, e -> {
             saved = false;
@@ -112,21 +98,19 @@ public class Primary extends Plugin {
         Events.on(GameOverEvent.class, event -> {
             isLogging = false;
             writeLog();
-            logs[0] = new ArrayList<String>();//messages
-            logs[1] = new ArrayList<String>();//build
-            logs[2] = new ArrayList<String>();//destroy
-            logs[3] = new ArrayList<String>();//votekick
-            logs[4] = new ArrayList<String>();//configure
+            logs[0] = new ArrayList<>();//messages
+            logs[1] = new ArrayList<>();//build
+            logs[2] = new ArrayList<>();//destroy
+            logs[3] = new ArrayList<>();//votekick
+            logs[4] = new ArrayList<>();//configure
         });
-        Events.on(PlayerBanEvent.class, e -> {
-            netLogs.add(new SocketConnector.SendedPackage("Ban", "ÌÂ ÛÍ‡Á‡ÌÓ", e.player.name(), Administration.Config.valueOf("name").get().toString(), "ÕÂ ÛÍ‡Á‡ÌÓ", 0, new Date()));
-        });
+        Events.on(PlayerBanEvent.class, e -> new SendedPackage(e.player.name()));
     }
 
     public static void log(int type, String text) {
         try {
             logs[type].add("[" + new Date() + "] " + text + "\n");
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (ArrayIndexOutOfBoundsException ignored) {
         }
     }
 
@@ -141,7 +125,7 @@ public class Primary extends Plugin {
                 Log.err("no actions found");
                 return;
             }
-            String date = "" + new Date().toString().replace(' ', '-').replace(':', '-');
+            String date = format.format(new Date());
             File path = new File("config/aal/" + date);
             path.mkdir();
             msgLog = new File("config/aal/" + date + "/messageLog.txt");
@@ -212,12 +196,10 @@ public class Primary extends Plugin {
             for (Player p : Groups.player) {
                 if (p.con().address.equals(tgt.con.address)) {
                     p.getInfo().lastKicked = Time.millis() + time;
-                    p.kick("¬€ Á‡·‡ÌÂÌ˚ Ì‡ " + time / 1000 / 60 + " ÏËÌÛÚ ÔÓ ÔË˜ËÌÂ: " + args[2]);
+                    p.kick("–í–´ –∑–∞–±–∞–Ω–µ–Ω—ã –Ω–∞ " + time / 1000 / 60 + " –º–∏–Ω—É—Ç –ø–æ –ø—Ä–∏—á–∏–Ω–µ: " + args[2]);
                 }
             }
-            netLogs.add(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), Administration.Config.valueOf("name").get().toString(), " ÓÌÒÓÎ¸", time, new Date()));
-            System.out.println("posted");
-            return;
+            new SendedPackage(args[2], tgt.name(), "–ö–æ–Ω—Å–æ–ª—å");
         });
     }
 
@@ -235,12 +217,11 @@ public class Primary extends Plugin {
             for (Player p : Groups.player) {
                 if (p.con().address.equals(tgt.con.address)) {
                     p.getInfo().lastKicked = Time.millis() + time;
-                    p.kick("¬€ Á‡·‡ÌÂÌ˚ Ì‡ " + time / 1000 / 60 + " ÏËÌÛÚ ÔÓ ÔË˜ËÌÂ: " + args[2]);
+                    p.kick("–í–´ –∑–∞–±–∞–Ω–µ–Ω—ã –Ω–∞ " + time / 1000 / 60 + " –º–∏–Ω—É—Ç –ø–æ –ø—Ä–∏—á–∏–Ω–µ: " + args[2]);
                 }
             }
-            netLogs.add(new SocketConnector.SendedPackage("Ban", args[2], tgt.name(), Administration.Config.valueOf("name").get().toString(), player.name(), time, new Date()));
+            new SendedPackage(player.name(), time, args[2], tgt.name());
             System.out.println("posted");
-            return;
         });
         handler.<Player>register("spec", "<ip>", "hentai", (args, player) -> {
             if (!player.admin()) {
@@ -248,47 +229,105 @@ public class Primary extends Plugin {
             }
             Player tgt = Groups.player.find(p -> p.con.address.equals(args[0]));
             if (tgt == null) {
-                Call.infoMessage(player.con(), "ÕÂ Ì‡È‰ÂÌ");
+                Call.infoMessage(player.con(), "–ù–µ –Ω–∞–π–¥–µ–Ω");
                 return;
             }
             tgt.team(Team.all[113]);
         });
-        handler.<Player>register("team", "<id>", "hentai", (args, player) -> {
-            if (!player.admin()) {
-                return;
-            }
-            Player tgt = player;
-            int team = 1;
-            try {
-                team = Integer.parseInt(args[0]);
-            } catch (NumberFormatException e) {
-                tgt.sendMessage("Œ¯Ë·Í‡ ‚ ÔÂÓ·‡ÁÓ‚‡ÌËË ÌÓÏÂ‡");
-            }
-            tgt.team(Team.all[team]);
-        });
-        handler.<Player>register("post", "<ip> <msg...>", "send message to face", (args, player) -> {
+        handler.<Player>register("post", "<ip> <msg...>", "message –≤ –ª–∏—Ü–æ", (args, player) -> {
             if (!player.admin()) {
                 return;
             }
             Player tgt = Groups.player.find(p -> p.con.address.equals(args[0]));
             if (tgt == null) {
-                Call.infoMessage(player.con(), "ÕÂ Ì‡È‰ÂÌ");
+                Call.infoMessage(player.con(), "–ù–µ –Ω–∞–π–¥–µ–Ω");
                 return;
             }
             Call.infoMessage(tgt.con(), args[1]);
         });
-        handler.<Player>register("swipe", "<td/zk>", "œÂÂÏÂÁÂÌËÂ ÔÓ ÒÂ‚Â‡Ï", (args, player) -> {
-            int port = 0;
-            if (args[0].equals("td")) {
-                port = 6568;
+    }
+
+    public static class SendedPackage {
+        private final String ava = "https://i.pinimg.com/originals/2a/8d/a3/2a8da398c052ad3c34311073eb3110a3.jpg";
+
+        public SendedPackage(String reason, String name, String author) {
+            Webhook wh = new Webhook("nya");
+            wh.setUsername("–ë–∞–Ω—è—â–∞—è –∫–æ—à–∫–æ–¥–µ–≤–æ—á–∫–∞");
+            wh.setAvatarUrl(ava);
+            wh.addEmbed(new Webhook.EmbedObject().setTitle("–ë–ê–ù").addField("–°–∞–Ω–∏—Ç–∞—Ä", author, false).addField("–ü—Ä–∏—á–∏–Ω–∞", reason, false).addField("–ü–∞—Ü–∏–µ–Ω—Ç", name, false).setColor(new Color(110, 237, 139)));
+            try {
+                wh.execute();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                wh = null;
             }
-            if (args[0].equals("zk")) {
-                port = 6567;
+        }
+
+        public SendedPackage(String name) {
+            Webhook wh = new Webhook("nya");
+            wh.setUsername("–ë–∞–Ω—è—â–∞—è –∫–æ—à–∫–æ–¥–µ–≤–æ—á–∫–∞");
+            wh.setAvatarUrl(ava);
+            wh.addEmbed(new Webhook.EmbedObject().setTitle("–ë–ê–ù").addField("–ü–∞—Ü–∏–µ–Ω—Ç", name, false).setColor(new Color(110, 237, 139)));
+            try {
+                wh.execute();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                wh = null;
             }
-            if (port == 0) {
-                return;
+        }
+
+        public SendedPackage(String author, int time, String reason, String target) {
+            Webhook wh = new Webhook("nya");
+            wh.setUsername("–ë–∞–Ω—è—â–∞—è –∫–æ—à–∫–æ–¥–µ–≤–æ—á–∫–∞");
+            wh.setAvatarUrl(ava);
+            wh.addEmbed(new Webhook.EmbedObject()
+                    .setTitle("–ë–ê–ù")
+                    .addField("–ê–¥–º–∏–Ω", author, false)
+                    .addField("–ü—Ä–∏—á–∏–Ω–∞", reason, false)
+                    .addField("–î–ª–∏—Ç–µ–ª—å–Ω–æ—Å—Ç—å", parseTime(time), false)
+                    .addField("–ó–∞–±–∞–Ω–µ–Ω—ã–π", target, false)
+                    .addField("–°–µ—Ä–≤–µ—Ä", Administration.Config.valueOf("name").get().toString(), false)
+                    .setColor(new Color(110, 237, 139)))
+            ;
+            try {
+                wh.execute();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                wh = null;
             }
-            Call.connect(player.con, "shizashizashiza.ml", port);
-        });
+        }
+
+        private String parseTime(long time) {
+            long days = TimeUnit.MILLISECONDS.toDays(time);
+            long hours = TimeUnit.MILLISECONDS.toHours(time);
+            long minutes = TimeUnit.MILLISECONDS.toMinutes(time);
+            StringBuilder builder = new StringBuilder(" ");
+            System.out.println(days + " " + hours + " " + minutes);
+            if (days != 0) {
+                if (days < 0) {
+                    days *= -1;
+                }
+                builder.append(days + " –¥. ");
+            }
+            if (hours != 0) {
+                if (hours < 0) {
+                    hours *= -1;
+                }
+                hours = hours - days * 24;
+                builder.append(hours + " —á. ");
+            }
+            if (minutes != 0) {
+                if (minutes < 0) {
+                    minutes *= -1;
+                }
+                minutes = minutes - (days * 24 * 60);
+                minutes = minutes - (hours * 60);
+                builder.append(minutes + " –º. ");
+            }
+            return builder.toString();
+        }
     }
 }
